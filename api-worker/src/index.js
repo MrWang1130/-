@@ -1,19 +1,24 @@
 const TOKEN_DAYS = 30;
 const MAX_PROGRESS_BYTES = 1024 * 1024;
 
+const CORS_HEADERS = {
+  "access-control-allow-origin": "*",
+  "access-control-allow-methods": "GET,POST,PUT,OPTIONS",
+  "access-control-allow-headers": "content-type,authorization"
+};
+
 const json = (data, status = 200) =>
   new Response(JSON.stringify(data), {
     status,
     headers: {
       "content-type": "application/json; charset=utf-8",
       "cache-control": "no-store",
-      "access-control-allow-origin": "*",
-      "access-control-allow-methods": "GET,POST,PUT,OPTIONS",
-      "access-control-allow-headers": "content-type,authorization"
+      ...CORS_HEADERS
     }
   });
 
 const error = (message, status = 400) => json({ error: message }, status);
+const preflight = () => new Response(null, { status: 204, headers: CORS_HEADERS });
 
 const normalizeUsername = (value) => String(value || "").trim().replace(/\s+/g, "_").slice(0, 32);
 const usernameKey = (value) => normalizeUsername(value).toLowerCase();
@@ -204,7 +209,7 @@ const handlePutProgress = async (request, env) => {
 
 export default {
   async fetch(request, env) {
-    if (request.method === "OPTIONS") return json({}, 204);
+    if (request.method === "OPTIONS") return preflight();
 
     const url = new URL(request.url);
     if (url.pathname === "/api/health") return json({ ok: true });
