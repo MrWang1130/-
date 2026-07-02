@@ -37,7 +37,10 @@ ql-auth {
 }
 
 .ql-auth-card {
-  width: min(390px, 100%);
+  display: grid;
+  width: min(430px, 100%);
+  max-height: calc(100vh - 36px);
+  overflow-y: auto;
   border-radius: 16px;
   background: #fff;
   padding: 22px;
@@ -95,7 +98,8 @@ ql-auth {
 }
 
 .ql-auth-form {
-  display: grid;
+  display: flex !important;
+  flex-direction: column;
   gap: 12px;
 }
 
@@ -125,6 +129,7 @@ ql-auth {
 .ql-auth-submit,
 .ql-auth-secondary {
   height: 42px;
+  min-height: 42px;
   border: 0;
   border-radius: 10px;
   font-weight: 800;
@@ -137,8 +142,16 @@ ql-auth {
 }
 
 .ql-auth-submit {
-  background: #6366f1;
-  color: #fff;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  width: 100% !important;
+  min-height: 48px;
+  margin-top: 4px;
+  background: #6366f1 !important;
+  color: #fff !important;
+  font-size: 16px;
+  box-shadow: 0 12px 24px rgba(99, 102, 241, 0.24);
 }
 
 .ql-auth-secondary {

@@ -111,7 +111,7 @@
           <label>用户名<input id="qlAuthUsername" autocomplete="username" required /></label>
           <label>密码<input id="qlAuthPassword" type="password" autocomplete="current-password" required /></label>
           <div class="ql-auth-message" id="qlAuthMessage"></div>
-          <button class="ql-auth-submit" type="submit" id="qlAuthSubmit">登录</button>
+          <button class="ql-auth-submit" type="submit" id="qlAuthSubmit">确认登录</button>
         </form>
         <div class="ql-auth-user" id="qlAuthUser">
           <p id="qlAuthUserText"></p>
@@ -157,7 +157,7 @@
   const setMode = (nextMode) => {
     mode = nextMode;
     el.title.textContent = mode === "login" ? "登录" : "注册";
-    el.submit.textContent = mode === "login" ? "登录" : "注册";
+    el.submit.textContent = mode === "login" ? "确认登录" : "确认注册";
     setMessage("");
     el.tabs.querySelectorAll("button").forEach((button) => {
       button.dataset.active = String(button.dataset.mode === mode);
