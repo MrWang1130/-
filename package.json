@@ -12,7 +12,9 @@
     "build": "vinext build",
     "start": "vinext start",
     "local-api": "node server.cjs",
-    "lint": "eslint . --ignore-pattern dist --ignore-pattern .next"
+    "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
+    "api:deploy": "wrangler deploy --config api-worker/wrangler.jsonc",
+    "api:migrate": "wrangler d1 execute qwerty-auth-db --remote --file api-worker/schema.sql"
   },
   "dependencies": {
     "drizzle-orm": "0.45.2",

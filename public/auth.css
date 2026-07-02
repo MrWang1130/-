@@ -130,6 +130,12 @@ ql-auth {
   font-weight: 800;
 }
 
+.ql-auth-submit:disabled,
+.ql-auth-secondary:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+
 .ql-auth-submit {
   background: #6366f1;
   color: #fff;
@@ -144,6 +150,10 @@ ql-auth {
   min-height: 18px;
   color: #ef4444;
   font-size: 13px;
+}
+
+.ql-auth-message[data-tone="info"] {
+  color: #4f46e5;
 }
 
 .ql-auth-user {

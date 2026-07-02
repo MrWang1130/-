@@ -1,0 +1,19 @@
+﻿{
+  "name": "qwerty-auth-api",
+  "main": "src/index.js",
+  "compatibility_date": "2025-12-01",
+  "routes": [
+    {
+      "pattern": "api.wk113.xyz",
+      "custom_domain": true
+    }
+  ],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "qwerty-auth-db",
+      "database_id": "7bc4e362-9cea-46ac-8e5b-b9115d5a8028"
+    }
+  ]
+}
+
