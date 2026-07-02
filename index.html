@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#faf9ff" />
+    <title>Qwerty Learner</title>
+    <link rel="manifest" href="./manifest.json" />
+    <link rel="stylesheet" href="./src/styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="gallery-view" id="galleryView" aria-label="词库选择">
+        <nav class="language-tabs" id="languageTabs"></nav>
+        <nav class="group-tabs primary-groups" id="primaryGroupTabs"></nav>
+        <section class="dictionary-grid" id="dictionaryGrid"></section>
+        <nav class="group-tabs secondary-groups" id="secondaryGroupTabs"></nav>
+      </section>
+
+      <section class="practice-view is-hidden" id="practiceView" aria-label="打字练习">
+        <header class="practice-toolbar">
+          <button class="toolbar-text" id="openGalleryButton" type="button">CET-4</button>
+          <button class="toolbar-text" id="chapterButton" type="button">第 1 章</button>
+          <button class="toolbar-text" id="accentButton" type="button">美音</button>
+          <button class="toolbar-icon active" id="soundButton" type="button" title="发音">🔊</button>
+          <button class="toolbar-icon" id="shuffleButton" type="button" title="随机">🔀</button>
+          <button class="toolbar-icon" id="wordVisibleButton" type="button" title="隐藏单词">◉</button>
+          <button class="toolbar-icon active" id="translationButton" type="button" title="翻译">文A</button>
+          <button class="toolbar-icon" id="listButton" type="button" title="单词列表">▭</button>
+          <button class="toolbar-icon" id="statsButton" type="button" title="统计">◔</button>
+          <button class="toolbar-icon" id="themeButton" type="button" title="明暗模式">☀</button>
+          <button class="toolbar-icon active" id="keyboardButton" type="button" title="屏幕键盘">⌨</button>
+          <button class="toolbar-icon" id="settingsButton" type="button" title="设置">⚙</button>
+          <button class="start-button" id="startButton" type="button">Start</button>
+        </header>
+
+        <div class="practice-shell">
+          <button class="back-button" id="backToGalleryButton" type="button">‹ 词库</button>
+          <div class="word-progress-line">
+            <span id="deckName">CET-4 · 第 1 章</span>
+            <span id="wordIndex">1 / 20</span>
+          </div>
+
+          <section class="word-panel">
+            <div class="start-overlay" id="startOverlay">按任意键开始</div>
+            <div class="word-area">
+              <div class="letter-row" id="letterRow" aria-live="polite"></div>
+              <button class="voice-button" id="pronounceButton" type="button" title="发音">♪</button>
+            </div>
+            <div class="phonetic" id="phonetic"></div>
+            <div class="translation" id="definition"></div>
+            <label class="mobile-input">
+              <span>输入</span>
+              <input
+                id="typingInput"
+                type="text"
+                inputmode="latin"
+                autocapitalize="off"
+                autocomplete="off"
+                autocorrect="off"
+                spellcheck="false"
+                enterkeyhint="next"
+              />
+            </label>
+          </section>
+
+          <div class="progress-track">
+            <div id="deckProgress"></div>
+          </div>
+
+          <section class="speed-card" aria-label="统计">
+            <div><strong id="timeUsed">00:00</strong><span>时间</span></div>
+            <div><strong id="inputCount">0</strong><span>输入数</span></div>
+            <div><strong id="speed">0</strong><span>WPM</span></div>
+            <div><strong id="correctCount">0</strong><span>正确数</span></div>
+            <div><strong id="accuracy">100%</strong><span>正确率</span></div>
+          </section>
+
+          <div class="keyboard" id="keyboard"></div>
+
+          <section class="data-bar" aria-label="数据">
+            <span id="syncLine">本地进度</span>
+            <span id="saveState">已保存</span>
+            <button id="exportButton" type="button">导出</button>
+            <button id="importButton" type="button">导入</button>
+            <button id="resetButton" type="button">重置</button>
+            <input id="importFile" type="file" accept="application/json" hidden />
+          </section>
+        </div>
+      </section>
+    </main>
+
+    <dialog class="sheet-dialog" id="chapterDialog">
+      <form class="sheet-panel" method="dialog">
+        <div class="sheet-title">
+          <h2>选择章节</h2>
+          <button type="button" id="closeChapterDialog">关闭</button>
+        </div>
+        <div class="chapter-grid" id="chapterGrid"></div>
+      </form>
+    </dialog>
+
+    <dialog class="sheet-dialog" id="listDialog">
+      <form class="sheet-panel word-list-panel" method="dialog">
+        <div class="sheet-title">
+          <h2>本章单词</h2>
+          <button type="button" id="closeListDialog">关闭</button>
+        </div>
+        <ol class="word-list" id="wordList"></ol>
+      </form>
+    </dialog>
+
+    <script src="./src/app.js" type="module"></script>
+  </body>
+</html>
