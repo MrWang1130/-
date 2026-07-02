@@ -1,0 +1,13 @@
+{
+  "name": "qwerty-learner-sync",
+  "version": "0.2.0",
+  "private": true,
+  "description": "Mobile-friendly Qwerty Learner style app with account sync.",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

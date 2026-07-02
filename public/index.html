@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#faf9ff" />
+    <title>Qwerty Learner Sync</title>
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="stylesheet" href="/src/styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="topbar">
+        <a class="brand-block" href="https://qwerty.kaiyi.cool/" target="_blank" rel="noreferrer">
+          <span class="brand-mark">Q</span>
+          <h1>Qwerty Learner</h1>
+        </a>
+
+        <nav class="toolbar" aria-label="练习工具">
+          <select id="categorySelect" title="分类"></select>
+          <select id="deckSelect" title="词库"></select>
+          <button class="tool-button" id="prevChapterButton" type="button" title="上一章">‹</button>
+          <select id="chapterSelect" title="章节"></select>
+          <button class="tool-button" id="nextChapterButton" type="button" title="下一章">›</button>
+          <button class="tool-button" id="soundButton" type="button" title="发音">S</button>
+          <button class="tool-button" id="syncButton" type="button">同步</button>
+          <button class="primary-button" id="accountButton" type="button">登录</button>
+        </nav>
+      </header>
+
+      <section class="typing-stage" aria-label="单词练习">
+        <div class="stage-topline">
+          <span id="deckName">CET-4</span>
+          <span id="wordIndex">1 / 20</span>
+        </div>
+
+        <div class="word-panel">
+          <div class="start-overlay" id="startOverlay">按任意键开始</div>
+          <div class="word-area">
+            <div class="letter-row" id="letterRow" aria-live="polite"></div>
+            <button class="voice-button" id="pronounceButton" type="button" title="发音">♪</button>
+          </div>
+          <div class="phonetic" id="phonetic"></div>
+          <div class="translation" id="definition"></div>
+          <label class="mobile-input">
+            <span>输入</span>
+            <input
+              id="typingInput"
+              type="text"
+              inputmode="latin"
+              autocapitalize="off"
+              autocomplete="off"
+              autocorrect="off"
+              spellcheck="false"
+              enterkeyhint="next"
+            />
+          </label>
+        </div>
+
+        <div class="progress-track">
+          <div id="deckProgress"></div>
+        </div>
+
+        <section class="speed-card" aria-label="统计">
+          <div><strong id="timeUsed">00:00</strong><span>时间</span></div>
+          <div><strong id="inputCount">0</strong><span>输入数</span></div>
+          <div><strong id="speed">0</strong><span>WPM</span></div>
+          <div><strong id="correctCount">0</strong><span>正确数</span></div>
+          <div><strong id="accuracy">100%</strong><span>正确率</span></div>
+        </section>
+
+        <div class="keyboard" id="keyboard"></div>
+
+        <section class="data-bar" aria-label="数据">
+          <span id="syncLine">本地访客</span>
+          <span id="saveState">已保存</span>
+          <button id="exportButton" type="button">导出</button>
+          <button id="importButton" type="button">导入</button>
+          <button id="resetButton" type="button">重置</button>
+          <input id="importFile" type="file" accept="application/json" hidden />
+        </section>
+
+        <p class="source-note">
+          词库来源 RealKai42/qwerty-learner · GPL-3.0
+        </p>
+      </section>
+    </main>
+
+    <dialog class="auth-dialog" id="authDialog">
+      <form class="auth-box" id="authForm" method="dialog">
+        <div class="dialog-title">
+          <h2 id="authTitle">登录</h2>
+          <button class="tool-button" id="closeAuth" type="button" aria-label="关闭" title="关闭">X</button>
+        </div>
+        <div class="auth-tabs">
+          <button class="active" id="loginTab" type="button">登录</button>
+          <button id="signupTab" type="button">注册</button>
+        </div>
+        <label>
+          <span>用户名</span>
+          <input id="usernameInput" name="username" autocomplete="username" required />
+        </label>
+        <label>
+          <span>密码</span>
+          <input id="passwordInput" name="password" type="password" autocomplete="current-password" required />
+        </label>
+        <p class="auth-message" id="authMessage"></p>
+        <button class="primary-button wide" id="authSubmit" type="submit">登录</button>
+      </form>
+    </dialog>
+
+    <script src="/src/app.js" type="module"></script>
+  </body>
+</html>
