@@ -4,108 +4,109 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#faf9ff" />
-    <title>Qwerty Learner Sync</title>
+    <title>Qwerty Learner</title>
     <link rel="manifest" href="./manifest.json" />
     <link rel="stylesheet" href="./src/styles.css" />
   </head>
   <body>
     <main class="app-shell">
-      <header class="topbar">
-        <a class="brand-block" href="https://qwerty.kaiyi.cool/" target="_blank" rel="noreferrer">
-          <span class="brand-mark">Q</span>
-          <h1>Qwerty Learner</h1>
-        </a>
+      <section class="gallery-view" id="galleryView" aria-label="词库选择">
+        <nav class="language-tabs" id="languageTabs"></nav>
+        <nav class="group-tabs primary-groups" id="primaryGroupTabs"></nav>
+        <section class="dictionary-grid" id="dictionaryGrid"></section>
+        <nav class="group-tabs secondary-groups" id="secondaryGroupTabs"></nav>
+      </section>
 
-        <nav class="toolbar" aria-label="练习工具">
-          <select id="categorySelect" title="分类"></select>
-          <select id="deckSelect" title="词库"></select>
-          <button class="tool-button" id="prevChapterButton" type="button" title="上一章">‹</button>
-          <select id="chapterSelect" title="章节"></select>
-          <button class="tool-button" id="nextChapterButton" type="button" title="下一章">›</button>
-          <button class="tool-button" id="soundButton" type="button" title="发音">S</button>
-          <button class="tool-button" id="syncButton" type="button">同步</button>
-          <button class="primary-button" id="accountButton" type="button">登录</button>
-        </nav>
-      </header>
+      <section class="practice-view is-hidden" id="practiceView" aria-label="打字练习">
+        <header class="practice-toolbar">
+          <button class="toolbar-text" id="openGalleryButton" type="button">CET-4</button>
+          <button class="toolbar-text" id="chapterButton" type="button">第 1 章</button>
+          <button class="toolbar-text" id="accentButton" type="button">美音</button>
+          <button class="toolbar-icon active" id="soundButton" type="button" title="发音">🔊</button>
+          <button class="toolbar-icon" id="shuffleButton" type="button" title="随机">🔀</button>
+          <button class="toolbar-icon" id="wordVisibleButton" type="button" title="隐藏单词">◉</button>
+          <button class="toolbar-icon active" id="translationButton" type="button" title="翻译">文A</button>
+          <button class="toolbar-icon" id="listButton" type="button" title="单词列表">▭</button>
+          <button class="toolbar-icon" id="statsButton" type="button" title="统计">◔</button>
+          <button class="toolbar-icon" id="themeButton" type="button" title="明暗模式">☀</button>
+          <button class="toolbar-icon active" id="keyboardButton" type="button" title="屏幕键盘">⌨</button>
+          <button class="toolbar-icon" id="settingsButton" type="button" title="设置">⚙</button>
+          <button class="start-button" id="startButton" type="button">Start</button>
+        </header>
 
-      <section class="typing-stage" aria-label="单词练习">
-        <div class="stage-topline">
-          <span id="deckName">CET-4</span>
-          <span id="wordIndex">1 / 20</span>
-        </div>
-
-        <div class="word-panel">
-          <div class="start-overlay" id="startOverlay">按任意键开始</div>
-          <div class="word-area">
-            <div class="letter-row" id="letterRow" aria-live="polite"></div>
-            <button class="voice-button" id="pronounceButton" type="button" title="发音">♪</button>
+        <div class="practice-shell">
+          <button class="back-button" id="backToGalleryButton" type="button">‹ 词库</button>
+          <div class="word-progress-line">
+            <span id="deckName">CET-4 · 第 1 章</span>
+            <span id="wordIndex">1 / 20</span>
           </div>
-          <div class="phonetic" id="phonetic"></div>
-          <div class="translation" id="definition"></div>
-          <label class="mobile-input">
-            <span>输入</span>
-            <input
-              id="typingInput"
-              type="text"
-              inputmode="latin"
-              autocapitalize="off"
-              autocomplete="off"
-              autocorrect="off"
-              spellcheck="false"
-              enterkeyhint="next"
-            />
-          </label>
+
+          <section class="word-panel">
+            <div class="start-overlay" id="startOverlay">按任意键开始</div>
+            <div class="word-area">
+              <div class="letter-row" id="letterRow" aria-live="polite"></div>
+              <button class="voice-button" id="pronounceButton" type="button" title="发音">♪</button>
+            </div>
+            <div class="phonetic" id="phonetic"></div>
+            <div class="translation" id="definition"></div>
+            <label class="mobile-input">
+              <span>输入</span>
+              <input
+                id="typingInput"
+                type="text"
+                inputmode="latin"
+                autocapitalize="off"
+                autocomplete="off"
+                autocorrect="off"
+                spellcheck="false"
+                enterkeyhint="next"
+              />
+            </label>
+          </section>
+
+          <div class="progress-track">
+            <div id="deckProgress"></div>
+          </div>
+
+          <section class="speed-card" aria-label="统计">
+            <div><strong id="timeUsed">00:00</strong><span>时间</span></div>
+            <div><strong id="inputCount">0</strong><span>输入数</span></div>
+            <div><strong id="speed">0</strong><span>WPM</span></div>
+            <div><strong id="correctCount">0</strong><span>正确数</span></div>
+            <div><strong id="accuracy">100%</strong><span>正确率</span></div>
+          </section>
+
+          <div class="keyboard" id="keyboard"></div>
+
+          <section class="data-bar" aria-label="数据">
+            <span id="syncLine">本地进度</span>
+            <span id="saveState">已保存</span>
+            <button id="exportButton" type="button">导出</button>
+            <button id="importButton" type="button">导入</button>
+            <button id="resetButton" type="button">重置</button>
+            <input id="importFile" type="file" accept="application/json" hidden />
+          </section>
         </div>
-
-        <div class="progress-track">
-          <div id="deckProgress"></div>
-        </div>
-
-        <section class="speed-card" aria-label="统计">
-          <div><strong id="timeUsed">00:00</strong><span>时间</span></div>
-          <div><strong id="inputCount">0</strong><span>输入数</span></div>
-          <div><strong id="speed">0</strong><span>WPM</span></div>
-          <div><strong id="correctCount">0</strong><span>正确数</span></div>
-          <div><strong id="accuracy">100%</strong><span>正确率</span></div>
-        </section>
-
-        <div class="keyboard" id="keyboard"></div>
-
-        <section class="data-bar" aria-label="数据">
-          <span id="syncLine">本地访客</span>
-          <span id="saveState">已保存</span>
-          <button id="exportButton" type="button">导出</button>
-          <button id="importButton" type="button">导入</button>
-          <button id="resetButton" type="button">重置</button>
-          <input id="importFile" type="file" accept="application/json" hidden />
-        </section>
-
-        <p class="source-note">
-          词库来源 RealKai42/qwerty-learner · GPL-3.0
-        </p>
       </section>
     </main>
 
-    <dialog class="auth-dialog" id="authDialog">
-      <form class="auth-box" id="authForm" method="dialog">
-        <div class="dialog-title">
-          <h2 id="authTitle">登录</h2>
-          <button class="tool-button" id="closeAuth" type="button" aria-label="关闭" title="关闭">X</button>
+    <dialog class="sheet-dialog" id="chapterDialog">
+      <form class="sheet-panel" method="dialog">
+        <div class="sheet-title">
+          <h2>选择章节</h2>
+          <button type="button" id="closeChapterDialog">关闭</button>
         </div>
-        <div class="auth-tabs">
-          <button class="active" id="loginTab" type="button">登录</button>
-          <button id="signupTab" type="button">注册</button>
+        <div class="chapter-grid" id="chapterGrid"></div>
+      </form>
+    </dialog>
+
+    <dialog class="sheet-dialog" id="listDialog">
+      <form class="sheet-panel word-list-panel" method="dialog">
+        <div class="sheet-title">
+          <h2>本章单词</h2>
+          <button type="button" id="closeListDialog">关闭</button>
         </div>
-        <label>
-          <span>用户名</span>
-          <input id="usernameInput" name="username" autocomplete="username" required />
-        </label>
-        <label>
-          <span>密码</span>
-          <input id="passwordInput" name="password" type="password" autocomplete="current-password" required />
-        </label>
-        <p class="auth-message" id="authMessage"></p>
-        <button class="primary-button wide" id="authSubmit" type="submit">登录</button>
+        <ol class="word-list" id="wordList"></ol>
       </form>
     </dialog>
 

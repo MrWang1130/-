@@ -1,335 +1,414 @@
-const STORAGE_KEY = "qwerty-sync.progress.v2";
-const AUTH_KEY = "qwerty-sync.auth.v1";
 const MANIFEST_URL = new URL("./dictionaries.json", import.meta.url).toString();
+const STORAGE_KEY = "qwerty-learner.full.progress.v1";
 const DEFAULT_DICT_ID = "cet4";
 
-const SELECTORS = {
-  accountButton: "#accountButton",
-  accuracy: "#accuracy",
-  authDialog: "#authDialog",
-  authForm: "#authForm",
-  authMessage: "#authMessage",
-  authSubmit: "#authSubmit",
-  authTitle: "#authTitle",
-  categorySelect: "#categorySelect",
-  chapterSelect: "#chapterSelect",
-  closeAuth: "#closeAuth",
-  correctCount: "#correctCount",
-  deckName: "#deckName",
-  deckProgress: "#deckProgress",
-  deckSelect: "#deckSelect",
-  definition: "#definition",
-  exportButton: "#exportButton",
-  importButton: "#importButton",
-  importFile: "#importFile",
-  inputCount: "#inputCount",
-  keyboard: "#keyboard",
-  letterRow: "#letterRow",
-  loginTab: "#loginTab",
-  nextChapterButton: "#nextChapterButton",
-  passwordInput: "#passwordInput",
-  phonetic: "#phonetic",
-  prevChapterButton: "#prevChapterButton",
-  pronounceButton: "#pronounceButton",
-  resetButton: "#resetButton",
-  saveState: "#saveState",
-  signupTab: "#signupTab",
-  soundButton: "#soundButton",
-  speed: "#speed",
-  startOverlay: "#startOverlay",
-  syncButton: "#syncButton",
-  syncLine: "#syncLine",
-  timeUsed: "#timeUsed",
-  typingInput: "#typingInput",
-  usernameInput: "#usernameInput",
-  wordIndex: "#wordIndex"
-};
+const LANGUAGES = [
+  { id: "en", label: "英语" },
+  { id: "ja", label: "日语" },
+  { id: "de", label: "德语" },
+  { id: "kk", label: "哈萨克语" },
+  { id: "id", label: "印尼语" },
+  { id: "code", label: "Code" }
+];
 
-const el = Object.fromEntries(
-  Object.entries(SELECTORS).map(([name, selector]) => [name, document.querySelector(selector)])
-);
+const EN_PRIMARY = ["大学英语", "考研", "专业英语", "PET", "自考英语二", "其他"];
+const EN_SECONDARY = ["TOEFL", "PET", "GMAT", "GRE", "IELTS", "KET", "SAT", "BEC", "PTE", "TOEIC", "CEFR", "牛津版", "其他", "FCE"];
+const CODE_GROUPS = ["全部", "JavaScript", "Python", "Java", "C#", "Go", "Rust", "Node", "SQL", "少儿编程", "其他"];
+const COLLEGE_ORDER = [
+  "cet4",
+  "cet6",
+  "xinghuoqiaoji_4",
+  "xinghuoqiaoji_6",
+  "cet4-sub",
+  "cet6-sub",
+  "level4",
+  "level8",
+  "3000_ClassRoom_English_Words"
+];
+
+const $ = (selector) => document.querySelector(selector);
+const el = {
+  galleryView: $("#galleryView"),
+  practiceView: $("#practiceView"),
+  languageTabs: $("#languageTabs"),
+  primaryGroupTabs: $("#primaryGroupTabs"),
+  secondaryGroupTabs: $("#secondaryGroupTabs"),
+  dictionaryGrid: $("#dictionaryGrid"),
+  openGalleryButton: $("#openGalleryButton"),
+  chapterButton: $("#chapterButton"),
+  accentButton: $("#accentButton"),
+  soundButton: $("#soundButton"),
+  shuffleButton: $("#shuffleButton"),
+  wordVisibleButton: $("#wordVisibleButton"),
+  translationButton: $("#translationButton"),
+  listButton: $("#listButton"),
+  statsButton: $("#statsButton"),
+  themeButton: $("#themeButton"),
+  keyboardButton: $("#keyboardButton"),
+  settingsButton: $("#settingsButton"),
+  startButton: $("#startButton"),
+  backToGalleryButton: $("#backToGalleryButton"),
+  deckName: $("#deckName"),
+  wordIndex: $("#wordIndex"),
+  letterRow: $("#letterRow"),
+  startOverlay: $("#startOverlay"),
+  pronounceButton: $("#pronounceButton"),
+  phonetic: $("#phonetic"),
+  definition: $("#definition"),
+  typingInput: $("#typingInput"),
+  deckProgress: $("#deckProgress"),
+  timeUsed: $("#timeUsed"),
+  inputCount: $("#inputCount"),
+  speed: $("#speed"),
+  correctCount: $("#correctCount"),
+  accuracy: $("#accuracy"),
+  keyboard: $("#keyboard"),
+  syncLine: $("#syncLine"),
+  saveState: $("#saveState"),
+  exportButton: $("#exportButton"),
+  importButton: $("#importButton"),
+  importFile: $("#importFile"),
+  resetButton: $("#resetButton"),
+  chapterDialog: $("#chapterDialog"),
+  chapterGrid: $("#chapterGrid"),
+  closeChapterDialog: $("#closeChapterDialog"),
+  listDialog: $("#listDialog"),
+  wordList: $("#wordList"),
+  closeListDialog: $("#closeListDialog")
+};
 
 let manifest = null;
 let dictionaries = [];
-let categoryList = [];
 let dictionaryCache = new Map();
+let activeLanguage = "en";
+let activePrimary = "大学英语";
+let activeSecondary = null;
+let activeDictId = DEFAULT_DICT_ID;
 let activeWords = [];
-let activeChapterWords = [];
-let loading = true;
-let account = loadAuth();
-let progress = loadProgress();
-let authMode = "login";
+let chapterWords = [];
+let currentIndex = 0;
 let isTyping = false;
-let completionLock = false;
+let isLoading = false;
 let sessionStartedAt = 0;
-let sessionTimer = 0;
-let syncTimer = 0;
-let saveTimer = 0;
+let timerId = 0;
 let wrongResetTimer = 0;
+let progress = loadProgress();
 
 init();
 
 async function init() {
-  ensureProgressShape();
-  countSession();
   bindEvents();
   renderKeyboard();
-  renderAccount();
-  renderLoading("加载词库");
-
-  try {
-    await loadDictionaryManifest();
-    await restoreSession();
-    normalizeActiveDictionary();
-    renderDictionaryControls();
-    await loadActiveDictionary();
-  } catch (error) {
-    renderLoading(error.message || "词库加载失败");
+  renderShellState();
+  await loadManifest();
+  restoreLastDictionary();
+  renderGallery();
+  if (location.hash.startsWith("#practice")) {
+    await openPractice(activeDictId);
   }
-
-  registerServiceWorker();
-  focusInput();
 }
 
 function bindEvents() {
+  el.openGalleryButton.addEventListener("click", showGallery);
+  el.backToGalleryButton.addEventListener("click", showGallery);
+  el.chapterButton.addEventListener("click", openChapterDialog);
+  el.closeChapterDialog.addEventListener("click", () => el.chapterDialog.close());
+  el.listButton.addEventListener("click", openWordList);
+  el.closeListDialog.addEventListener("click", () => el.listDialog.close());
+  el.pronounceButton.addEventListener("click", speakCurrentWord);
+  el.soundButton.addEventListener("click", () => toggleSetting("sound"));
+  el.shuffleButton.addEventListener("click", () => toggleSetting("shuffle"));
+  el.wordVisibleButton.addEventListener("click", () => toggleSetting("showWord"));
+  el.translationButton.addEventListener("click", () => toggleSetting("showTranslation"));
+  el.statsButton.addEventListener("click", () => toggleSetting("showStats"));
+  el.themeButton.addEventListener("click", () => toggleSetting("dark"));
+  el.keyboardButton.addEventListener("click", () => toggleSetting("showKeyboard"));
+  el.settingsButton.addEventListener("click", () => alert("设置已在工具栏中展开：发音、随机、隐藏、翻译、统计、主题、键盘。"));
+  el.startButton.addEventListener("click", startTyping);
   el.typingInput.addEventListener("input", onInput);
   el.typingInput.addEventListener("keydown", (event) => {
-    if (event.key === "Enter") {
+    if (event.key === "Enter" && inputIsComplete()) {
       event.preventDefault();
-      if (isCurrentInputComplete()) completeWord();
+      completeWord();
     }
   });
-
-  el.categorySelect.addEventListener("change", onCategoryChange);
-  el.deckSelect.addEventListener("change", () => switchDictionary(el.deckSelect.value));
-  el.chapterSelect.addEventListener("change", () => switchChapter(Number(el.chapterSelect.value)));
-  el.prevChapterButton.addEventListener("click", () => switchChapter(activeChapter() - 1));
-  el.nextChapterButton.addEventListener("click", () => switchChapter(activeChapter() + 1));
-  el.pronounceButton.addEventListener("click", speakCurrentWord);
-  el.soundButton.addEventListener("click", toggleSound);
-  el.syncButton.addEventListener("click", () => syncNow({ manual: true }));
-  el.accountButton.addEventListener("click", onAccountClick);
-  el.resetButton.addEventListener("click", resetProgress);
   el.exportButton.addEventListener("click", exportProgress);
   el.importButton.addEventListener("click", () => el.importFile.click());
   el.importFile.addEventListener("change", importProgress);
-
-  el.closeAuth.addEventListener("click", () => el.authDialog.close());
-  el.loginTab.addEventListener("click", () => setAuthMode("login"));
-  el.signupTab.addEventListener("click", () => setAuthMode("signup"));
-  el.authForm.addEventListener("submit", submitAuth);
-
-  document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "hidden") saveProgress({ sync: false });
+  el.resetButton.addEventListener("click", resetProgress);
+  document.addEventListener("keydown", (event) => {
+    if (el.practiceView.classList.contains("is-hidden")) return;
+    if (event.target === el.typingInput) return;
+    if (event.key.length === 1 || event.key === "Backspace") {
+      startTyping();
+      el.typingInput.focus({ preventScroll: true });
+    }
   });
 }
 
-function defaultProgress() {
-  return {
-    schema: 2,
-    activeDeck: DEFAULT_DICT_ID,
-    chapters: {},
-    cursors: {},
-    deckStats: {},
-    stats: {
-      words: 0,
-      chars: 0,
-      errors: 0,
-      totalMs: 0,
-      streak: 0,
-      bestStreak: 0,
-      sessions: 0
-    },
-    history: [],
-    settings: {
-      sound: true
-    },
-    updatedAt: new Date().toISOString()
-  };
+async function loadManifest() {
+  const response = await fetch(MANIFEST_URL, { cache: "no-cache" });
+  if (!response.ok) throw new Error("词库目录加载失败");
+  manifest = await response.json();
+  dictionaries = manifest.dictionaries || [];
 }
 
 function loadProgress() {
   try {
-    return { ...defaultProgress(), ...JSON.parse(localStorage.getItem(STORAGE_KEY)) };
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    return {
+      activeDictId: DEFAULT_DICT_ID,
+      chapters: {},
+      cursors: {},
+      stats: { words: 0, chars: 0, errors: 0, totalMs: 0 },
+      settings: {
+        sound: true,
+        shuffle: false,
+        showWord: true,
+        showTranslation: true,
+        showStats: true,
+        showKeyboard: true,
+        dark: false
+      },
+      ...saved
+    };
   } catch {
-    return defaultProgress();
+    return {
+      activeDictId: DEFAULT_DICT_ID,
+      chapters: {},
+      cursors: {},
+      stats: { words: 0, chars: 0, errors: 0, totalMs: 0 },
+      settings: {
+        sound: true,
+        shuffle: false,
+        showWord: true,
+        showTranslation: true,
+        showStats: true,
+        showKeyboard: true,
+        dark: false
+      }
+    };
   }
 }
 
-function loadAuth() {
-  try {
-    const saved = JSON.parse(localStorage.getItem(AUTH_KEY));
-    return saved?.token ? saved : null;
-  } catch {
-    return null;
+function saveProgress() {
+  progress.activeDictId = activeDictId;
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
+  el.saveState.textContent = "已保存";
+}
+
+function restoreLastDictionary() {
+  if (dictionaries.some((dict) => dict.id === progress.activeDictId)) {
+    activeDictId = progress.activeDictId;
+  }
+  const dict = getDict(activeDictId);
+  if (dict) {
+    activeLanguage = dict.languageCategory;
+    activePrimary = classifyPrimary(dict);
   }
 }
 
-function ensureProgressShape() {
-  const base = defaultProgress();
-  progress = {
-    ...base,
-    ...progress,
-    chapters: { ...base.chapters, ...(progress.chapters || {}) },
-    cursors: { ...base.cursors, ...(progress.cursors || {}) },
-    deckStats: { ...base.deckStats, ...(progress.deckStats || {}) },
-    stats: { ...base.stats, ...(progress.stats || {}) },
-    settings: { ...base.settings, ...(progress.settings || {}) },
-    history: Array.isArray(progress.history) ? progress.history.slice(0, 30) : []
-  };
+function renderGallery() {
+  renderLanguageTabs();
+  renderPrimaryGroups();
+  renderSecondaryGroups();
+  renderDictionaryGrid();
 }
 
-function countSession() {
-  const marker = "qwerty-sync.session.counted";
-  if (sessionStorage.getItem(marker)) return;
-  progress.stats.sessions += 1;
-  sessionStorage.setItem(marker, "1");
-  saveProgress({ sync: false });
+function renderLanguageTabs() {
+  el.languageTabs.textContent = "";
+  LANGUAGES.filter((lang) => dictionaries.some((dict) => dict.languageCategory === lang.id)).forEach((lang) => {
+    const button = document.createElement("button");
+    button.className = `language-tab ${lang.id === activeLanguage ? "active" : ""}`;
+    button.type = "button";
+    button.innerHTML = `<span class="flag flag-${lang.id}" aria-hidden="true"></span>${lang.label}`;
+    button.addEventListener("click", () => {
+      activeLanguage = lang.id;
+      activeSecondary = null;
+      activePrimary = defaultPrimaryForLanguage(lang.id);
+      renderGallery();
+    });
+    el.languageTabs.append(button);
+  });
 }
 
-async function loadDictionaryManifest() {
-  const response = await fetch(MANIFEST_URL, { cache: "no-cache" });
-  if (!response.ok) throw new Error("无法读取词库目录");
-  manifest = await response.json();
-  dictionaries = Array.isArray(manifest.dictionaries) ? manifest.dictionaries : [];
-  if (!dictionaries.length) throw new Error("词库目录为空");
-  categoryList = [...new Set(dictionaries.map((dict) => dict.category || "词库"))];
+function renderPrimaryGroups() {
+  const groups = primaryGroupsForLanguage(activeLanguage);
+  if (!groups.includes(activePrimary)) activePrimary = groups[0];
+  el.primaryGroupTabs.textContent = "";
+  groups.forEach((group) => {
+    const button = document.createElement("button");
+    button.className = `group-tab ${group === activePrimary && !activeSecondary ? "active" : ""}`;
+    button.type = "button";
+    button.textContent = group;
+    button.addEventListener("click", () => {
+      activePrimary = group;
+      activeSecondary = null;
+      renderGallery();
+    });
+    el.primaryGroupTabs.append(button);
+  });
 }
 
-function normalizeActiveDictionary() {
-  if (!dictionaries.some((dict) => dict.id === progress.activeDeck)) {
-    progress.activeDeck = dictionaries.some((dict) => dict.id === DEFAULT_DICT_ID) ? DEFAULT_DICT_ID : dictionaries[0].id;
+function renderSecondaryGroups() {
+  el.secondaryGroupTabs.textContent = "";
+  const groups = activeLanguage === "en" ? EN_SECONDARY : activeLanguage === "code" ? CODE_GROUPS.slice(1) : [];
+  groups.forEach((group, index) => {
+    const button = document.createElement("button");
+    button.className = `group-tab ${group === activeSecondary || (!activeSecondary && index === 0) ? "active" : ""}`;
+    button.type = "button";
+    button.textContent = group;
+    button.addEventListener("click", () => {
+      activeSecondary = group;
+      activePrimary = activeLanguage === "code" ? "全部" : activePrimary;
+      renderGallery();
+    });
+    el.secondaryGroupTabs.append(button);
+  });
+}
+
+function renderDictionaryGrid() {
+  el.dictionaryGrid.textContent = "";
+  const items = filteredDictionaries().slice(0, 80);
+  items.forEach((dict) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "dict-card";
+    button.innerHTML = `<h3>${escapeHtml(dict.name)}</h3><p>${escapeHtml(dict.description || dict.category || "")}</p><strong>${dict.length || 0} 词</strong>`;
+    button.addEventListener("click", () => openPractice(dict.id));
+    el.dictionaryGrid.append(button);
+  });
+}
+
+function filteredDictionaries() {
+  const base = dictionaries.filter((dict) => dict.languageCategory === activeLanguage);
+  let result;
+  if (activeSecondary) {
+    result = base.filter((dict) => classifySecondary(dict) === activeSecondary);
+  } else {
+    result = base.filter((dict) => classifyPrimary(dict) === activePrimary);
   }
-  progress.chapters[progress.activeDeck] = activeChapter();
+  return sortDictionaries(result);
 }
 
-function activeDictionary() {
-  return dictionaries.find((dict) => dict.id === progress.activeDeck) || dictionaries[0];
+function sortDictionaries(items) {
+  return [...items].sort((a, b) => {
+    const ai = COLLEGE_ORDER.indexOf(a.id);
+    const bi = COLLEGE_ORDER.indexOf(b.id);
+    if (ai !== -1 || bi !== -1) return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
+    return (a.name || "").localeCompare(b.name || "", "zh-Hans-CN");
+  });
 }
 
-function activeChapter() {
-  return Math.max(0, Number(progress.chapters?.[progress.activeDeck] || 0));
+function primaryGroupsForLanguage(language) {
+  if (language === "en") return EN_PRIMARY;
+  if (language === "code") return CODE_GROUPS;
+  const names = [...new Set(dictionaries.filter((dict) => dict.languageCategory === language).map((dict) => normalizeCategoryName(dict.category)))];
+  return names.length ? names : ["全部"];
 }
 
-function currentCursorKey() {
-  return `${progress.activeDeck}:${activeChapter()}`;
+function defaultPrimaryForLanguage(language) {
+  if (language === "en") return "大学英语";
+  if (language === "code") return "全部";
+  return primaryGroupsForLanguage(language)[0];
 }
 
-function currentIndex() {
-  if (!activeChapterWords.length) return 0;
-  return Math.min(progress.cursors[currentCursorKey()] || 0, activeChapterWords.length - 1);
-}
-
-function currentWord() {
-  return activeChapterWords[currentIndex()] || null;
-}
-
-function currentChapterCount() {
-  const size = manifest?.chapterSize || 20;
-  return Math.max(1, Math.ceil(activeWords.length / size));
-}
-
-function getChapterWords() {
-  const size = manifest?.chapterSize || 20;
-  const start = activeChapter() * size;
-  return activeWords.slice(start, start + size);
-}
-
-function renderDictionaryControls() {
-  const active = activeDictionary();
-  const activeCategory = active.category || categoryList[0];
-
-  fillSelect(
-    el.categorySelect,
-    categoryList.map((category) => ({ value: category, label: category })),
-    activeCategory
-  );
-
-  const decks = dictionaries.filter((dict) => (dict.category || "词库") === activeCategory);
-  fillSelect(
-    el.deckSelect,
-    decks.map((dict) => ({ value: dict.id, label: `${dict.name} (${dict.length || "?"})` })),
-    active.id
-  );
-
-  const chapters = Array.from({ length: currentChapterCount() }, (_, index) => ({
-    value: String(index),
-    label: `第 ${index + 1} 章`
-  }));
-  fillSelect(el.chapterSelect, chapters, String(activeChapter()));
-
-  el.prevChapterButton.disabled = activeChapter() <= 0;
-  el.nextChapterButton.disabled = activeChapter() >= currentChapterCount() - 1;
-}
-
-function fillSelect(select, options, selectedValue) {
-  const previous = select.value;
-  select.textContent = "";
-  for (const option of options) {
-    const node = document.createElement("option");
-    node.value = option.value;
-    node.textContent = option.label;
-    select.append(node);
+function classifyPrimary(dict) {
+  if (dict.languageCategory === "code") {
+    const group = classifyCode(dict);
+    return CODE_GROUPS.includes(group) ? group : "其他";
   }
-  select.value = options.some((option) => option.value === selectedValue) ? selectedValue : previous;
+  if (dict.languageCategory !== "en") return normalizeCategoryName(dict.category);
+  const text = `${dict.id} ${dict.name} ${dict.description} ${dict.category}`.toLowerCase();
+  if (COLLEGE_ORDER.includes(dict.id)) return "大学英语";
+  if (/kaoyan|考研|926|hongbao|english_ii|dancimimi|shanguo/.test(text)) return "考研";
+  if (/arch|biomedical|itvocabulary|xueshiyingyu|专业|medical|architecture/.test(text)) return "专业英语";
+  if (/pets|pet/.test(text)) return "PET";
+  if (/self-study|自考|adult-self/.test(text)) return "自考英语二";
+  return "其他";
 }
 
-async function onCategoryChange() {
-  const first = dictionaries.find((dict) => (dict.category || "词库") === el.categorySelect.value);
-  if (first) await switchDictionary(first.id);
+function classifySecondary(dict) {
+  const text = `${dict.id} ${dict.name} ${dict.description} ${dict.category}`.toLowerCase();
+  if (/toefl/.test(text)) return "TOEFL";
+  if (/fce/.test(text)) return "FCE";
+  if (/gmat/.test(text)) return "GMAT";
+  if (/gre/.test(text)) return "GRE";
+  if (/ielts/.test(text)) return "IELTS";
+  if (/ket/.test(text)) return "KET";
+  if (/sat/.test(text)) return "SAT";
+  if (/bec/.test(text)) return "BEC";
+  if (/pte/.test(text)) return "PTE";
+  if (/toeic/.test(text)) return "TOEIC";
+  if (/cefr|ef_level/.test(text)) return "CEFR";
+  if (/oxford|牛津/.test(text)) return "牛津版";
+  if (/pets|pet/.test(text)) return "PET";
+  return "其他";
 }
 
-async function switchDictionary(id) {
-  if (id === progress.activeDeck) return;
-  progress.activeDeck = id;
-  progress.chapters[id] = progress.chapters[id] || 0;
+function classifyCode(dict) {
+  const text = `${dict.id} ${dict.name}`.toLowerCase();
+  if (/javascript|js-/.test(text)) return "JavaScript";
+  if (/python/.test(text)) return "Python";
+  if (/java/.test(text)) return "Java";
+  if (/csharp|c#/.test(text)) return "C#";
+  if (/go/.test(text)) return "Go";
+  if (/rust/.test(text)) return "Rust";
+  if (/node/.test(text)) return "Node";
+  if (/sql/.test(text)) return "SQL";
+  if (/child|少儿/.test(text)) return "少儿编程";
+  return "其他";
+}
+
+function normalizeCategoryName(value) {
+  return value || "全部";
+}
+
+async function openPractice(dictId) {
+  activeDictId = dictId;
+  const dict = getDict(dictId);
+  if (!dict) return;
+  activeLanguage = dict.languageCategory;
+  activePrimary = classifyPrimary(dict);
+  activeSecondary = null;
+  showPractice();
+  await loadDictionary(dict);
+  renderPractice();
+  saveProgress();
+  location.hash = "practice";
+}
+
+function showPractice() {
+  el.galleryView.classList.add("is-hidden");
+  el.practiceView.classList.remove("is-hidden");
+  setTimeout(() => el.typingInput.focus({ preventScroll: true }), 60);
+}
+
+function showGallery() {
   stopTyping();
-  saveProgress({ sync: true });
-  renderDictionaryControls();
-  await loadActiveDictionary();
+  el.practiceView.classList.add("is-hidden");
+  el.galleryView.classList.remove("is-hidden");
+  location.hash = "";
+  renderGallery();
 }
 
-async function switchChapter(chapter) {
-  const next = Math.min(Math.max(0, chapter), currentChapterCount() - 1);
-  if (next === activeChapter()) return;
-  progress.chapters[progress.activeDeck] = next;
-  stopTyping();
-  saveProgress({ sync: true });
-  await loadActiveDictionary();
-}
-
-async function loadActiveDictionary() {
-  const dict = activeDictionary();
-  loading = true;
-  renderLoading("加载词库");
-
-  try {
-    if (!dictionaryCache.has(dict.id)) {
-      const url = `${manifest.dictionaryBaseUrl}${dict.url}`;
-      const response = await fetch(url, { cache: "force-cache" });
-      if (!response.ok) throw new Error(`词库加载失败：${dict.name}`);
-      const rawWords = await response.json();
-      dictionaryCache.set(dict.id, normalizeWords(rawWords));
-    }
-
-    activeWords = dictionaryCache.get(dict.id);
-    progress.chapters[dict.id] = Math.min(activeChapter(), currentChapterCount() - 1);
-    activeChapterWords = getChapterWords();
-    loading = false;
-    resetCurrentWord();
-    renderDictionaryControls();
-    renderAll();
-  } catch (error) {
-    activeWords = [];
-    activeChapterWords = [];
-    loading = false;
-    renderLoading(error.message || "词库加载失败");
+async function loadDictionary(dict) {
+  isLoading = true;
+  el.deckName.textContent = "加载词库";
+  if (!dictionaryCache.has(dict.id)) {
+    const url = `${manifest.dictionaryBaseUrl}${dict.url}`;
+    const response = await fetch(url, { cache: "force-cache" });
+    if (!response.ok) throw new Error(`词库加载失败：${dict.name}`);
+    const raw = await response.json();
+    dictionaryCache.set(dict.id, normalizeWords(raw));
   }
+  activeWords = dictionaryCache.get(dict.id);
+  buildChapterWords();
+  isLoading = false;
 }
 
 function normalizeWords(rawWords) {
-  if (!Array.isArray(rawWords)) return [];
-  return rawWords
+  return (Array.isArray(rawWords) ? rawWords : [])
     .map((item) => {
       const term = normalizeTerm(item.name || item.word || item.term || "");
       const trans = Array.isArray(item.trans) ? item.trans : item.trans ? [item.trans] : [];
@@ -339,96 +418,79 @@ function normalizeWords(rawWords) {
         definition: trans.join("；")
       };
     })
-    .filter((item) => item.term.length > 0);
+    .filter((item) => item.term);
 }
 
-function normalizeTerm(value) {
-  return String(value)
-    .trim()
-    .replace(/\s+/g, " ")
-    .replace(/[‘’`]/g, "'")
-    .replace(/[“”]/g, '"');
+function buildChapterWords() {
+  const dict = getDict(activeDictId);
+  const chapter = activeChapter();
+  const size = manifest.chapterSize || 20;
+  const start = chapter * size;
+  chapterWords = activeWords.slice(start, start + size);
+  if (progress.settings.shuffle) chapterWords = seededShuffle(chapterWords, `${dict.id}:${chapter}`);
+  currentIndex = Math.min(progress.cursors[cursorKey()] || 0, Math.max(0, chapterWords.length - 1));
+  el.typingInput.value = "";
 }
 
-function renderLoading(text) {
-  el.deckName.textContent = text;
-  el.wordIndex.textContent = "";
-  el.letterRow.textContent = "";
-  const span = document.createElement("span");
-  span.textContent = "...";
-  span.className = "pending";
-  el.letterRow.append(span);
-  el.phonetic.textContent = "";
-  el.definition.textContent = text;
-  el.deckProgress.style.width = "0%";
-}
-
-function renderAll() {
-  renderWord();
+function renderPractice() {
+  const dict = getDict(activeDictId);
+  const chapter = activeChapter();
+  const word = currentWord();
+  el.openGalleryButton.textContent = dict.name;
+  el.chapterButton.textContent = `第 ${chapter + 1} 章`;
+  el.deckName.textContent = `${dict.name} · 第 ${chapter + 1} 章`;
+  el.wordIndex.textContent = chapterWords.length ? `${currentIndex + 1} / ${chapterWords.length}` : "0 / 0";
+  el.startButton.textContent = isTyping ? "Stop" : "Start";
+  el.startOverlay.classList.toggle("is-hidden", isTyping);
+  el.soundButton.classList.toggle("active", progress.settings.sound);
+  el.shuffleButton.classList.toggle("active", progress.settings.shuffle);
+  el.wordVisibleButton.classList.toggle("active", progress.settings.showWord);
+  el.translationButton.classList.toggle("active", progress.settings.showTranslation);
+  el.statsButton.classList.toggle("active", progress.settings.showStats);
+  el.keyboardButton.classList.toggle("active", progress.settings.showKeyboard);
+  el.keyboard.classList.toggle("is-hidden", !progress.settings.showKeyboard);
+  document.body.classList.toggle("dark", progress.settings.dark);
+  renderWord(word);
   renderStats();
-  renderAccount();
-  el.soundButton.classList.toggle("is-off", !progress.settings.sound);
 }
 
-function renderWord() {
-  if (loading || !activeChapterWords.length) {
-    renderLoading(loading ? "加载词库" : "当前词库为空");
+function renderWord(word) {
+  el.letterRow.textContent = "";
+  if (!word) {
+    el.definition.textContent = "当前章节没有单词";
     return;
   }
-
-  const dict = activeDictionary();
-  const word = currentWord();
-  const index = currentIndex();
-  const typed = Array.from(canonicalText(el.typingInput.value));
-  const target = Array.from(canonicalText(word.term));
-
-  el.deckName.textContent = `${dict.name} · 第 ${activeChapter() + 1} 章`;
-  el.wordIndex.textContent = `${index + 1} / ${activeChapterWords.length}`;
-  el.phonetic.textContent = word.phonetic ? `/${word.phonetic.replace(/^\/|\/$/g, "")}/` : "";
-  el.definition.textContent = word.definition;
-  el.startOverlay.classList.toggle("is-hidden", isTyping);
-  el.letterRow.textContent = "";
-
+  const typed = Array.from(canonical(el.typingInput.value));
+  const target = Array.from(canonical(word.term));
   Array.from(word.term).forEach((letter, index) => {
     const span = document.createElement("span");
     span.textContent = letter === " " ? "␣" : letter;
-    const inputChar = typed[index];
-    if (inputChar != null) {
-      span.className = compareChar(inputChar, target[index]) ? "correct" : "wrong";
+    if (typed[index] != null) {
+      span.className = typed[index] === target[index] ? "correct" : "wrong";
     } else {
       span.className = "pending";
     }
-    if (letter === " ") span.classList.add("space");
     el.letterRow.append(span);
   });
-
-  const progressPercent = Math.floor((index / activeChapterWords.length) * 100);
-  el.deckProgress.style.width = `${progressPercent}%`;
+  el.letterRow.classList.toggle("hide-letters", !progress.settings.showWord);
+  el.phonetic.textContent = word.phonetic ? `/${word.phonetic.replace(/^\/|\/$/g, "")}/` : "";
+  el.definition.textContent = progress.settings.showTranslation ? word.definition : "";
+  el.deckProgress.style.width = `${chapterWords.length ? Math.floor((currentIndex / chapterWords.length) * 100) : 0}%`;
 }
 
 function renderStats() {
   const stats = progress.stats;
-  const seconds = Math.floor(currentSessionMs() / 1000);
-  const totalInputs = (stats.chars || 0) + (stats.errors || 0);
-  const minutes = Math.max(1 / 60, currentSessionMs() / 60000);
-  const wpm = isTyping ? Math.round((stats.words || 0) / minutes) : 0;
-  const accuracy = totalInputs ? Math.max(0, Math.round(((stats.chars || 0) / totalInputs) * 100)) : 100;
-
+  const ms = sessionStartedAt ? performance.now() - sessionStartedAt : 0;
+  const seconds = Math.floor(ms / 1000);
+  const inputs = (stats.chars || 0) + (stats.errors || 0);
+  const wpm = ms > 0 ? Math.round((stats.words || 0) / Math.max(1 / 60, ms / 60000)) : 0;
+  const accuracy = inputs ? Math.max(0, Math.round(((stats.chars || 0) / inputs) * 100)) : 100;
   el.timeUsed.textContent = `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
-  el.inputCount.textContent = String(totalInputs);
+  el.inputCount.textContent = String(inputs);
   el.speed.textContent = String(wpm);
   el.correctCount.textContent = String(stats.chars || 0);
   el.accuracy.textContent = `${accuracy}%`;
-}
-
-function renderAccount() {
-  if (account?.token) {
-    el.accountButton.textContent = "退出";
-    el.syncLine.textContent = `${account.user?.username || "账号"} · 可同步`;
-  } else {
-    el.accountButton.textContent = "登录";
-    el.syncLine.textContent = "本地访客";
-  }
+  document.querySelector(".speed-card").classList.toggle("is-hidden", !progress.settings.showStats);
 }
 
 function renderKeyboard() {
@@ -442,390 +504,157 @@ function renderKeyboard() {
     const rowEl = document.createElement("div");
     rowEl.className = "keyboard-row";
     row.forEach((key) => {
-      const wide = key.length > 1;
-      rowEl.append(
-        createKey(key, wide ? "wide-key" : "", () => {
-          if (key === "清空") setInputValue("");
-          else if (key === "<-") setInputValue(el.typingInput.value.slice(0, -1));
-          else if (key === "空格") appendInput(" ");
-          else appendInput(key);
-        })
-      );
+      const button = document.createElement("button");
+      button.type = "button";
+      button.textContent = key;
+      if (key.length > 1) button.className = "wide-key";
+      button.addEventListener("pointerdown", (event) => {
+        event.preventDefault();
+        if (key === "清空") el.typingInput.value = "";
+        else if (key === "<-") el.typingInput.value = el.typingInput.value.slice(0, -1);
+        else if (key === "空格") el.typingInput.value += " ";
+        else el.typingInput.value += key;
+        onInput();
+        el.typingInput.focus({ preventScroll: true });
+      });
+      rowEl.append(button);
     });
     el.keyboard.append(rowEl);
   });
 }
 
-function createKey(label, className, action) {
-  const button = document.createElement("button");
-  button.type = "button";
-  button.textContent = label;
-  button.className = className;
-  button.addEventListener("pointerdown", (event) => {
-    event.preventDefault();
-    action();
-    focusInput();
-  });
-  return button;
-}
-
-function appendInput(value) {
-  setInputValue(`${el.typingInput.value}${value}`);
-}
-
-function setInputValue(value) {
-  el.typingInput.value = value;
-  onInput();
-}
-
 function onInput() {
-  if (loading || completionLock || !currentWord()) return;
-  if (!isTyping) startTyping();
-
+  if (isLoading || !currentWord()) return;
+  startTyping();
   clearTimeout(wrongResetTimer);
-  const wrongIndex = firstWrongIndex();
-  if (wrongIndex !== -1) {
+  if (firstWrongIndex() !== -1) {
     progress.stats.errors += 1;
-    progress.stats.streak = 0;
     shakeWord();
-    saveProgress({ sync: true });
     wrongResetTimer = window.setTimeout(() => {
       el.typingInput.value = "";
-      renderWord();
+      renderPractice();
     }, 300);
-    renderWord();
-    renderStats();
+    saveProgress();
+    renderPractice();
     return;
   }
-
-  renderWord();
-  renderStats();
-  if (isCurrentInputComplete()) completeWord();
-}
-
-function firstWrongIndex() {
-  const typed = Array.from(canonicalText(el.typingInput.value));
-  const target = Array.from(canonicalText(currentWord().term));
-  for (let index = 0; index < typed.length; index += 1) {
-    if (!compareChar(typed[index], target[index])) return index;
-  }
-  return -1;
-}
-
-function isCurrentInputComplete() {
-  const typed = Array.from(canonicalText(el.typingInput.value));
-  const target = Array.from(canonicalText(currentWord()?.term || ""));
-  return target.length > 0 && typed.length === target.length && typed.every((char, index) => compareChar(char, target[index]));
-}
-
-function canonicalText(value) {
-  return normalizeTerm(value).toLowerCase();
-}
-
-function compareChar(a, b) {
-  return (a || "") === (b || "");
-}
-
-function completeWord() {
-  if (completionLock || !currentWord()) return;
-  completionLock = true;
-  const word = currentWord();
-  const ms = Math.max(120, performance.now() - (sessionStartedAt || performance.now()));
-  const cursorKey = currentCursorKey();
-  const dictId = progress.activeDeck;
-
-  progress.stats.words += 1;
-  progress.stats.chars += Array.from(canonicalText(word.term)).length;
-  progress.stats.totalMs += ms;
-  progress.stats.streak = (progress.stats.streak || 0) + 1;
-  progress.stats.bestStreak = Math.max(progress.stats.bestStreak || 0, progress.stats.streak || 0);
-  progress.cursors[cursorKey] = (progress.cursors[cursorKey] || 0) + 1;
-  progress.deckStats[dictId] = progress.deckStats[dictId] || { completed: 0, errors: 0 };
-  progress.deckStats[dictId].completed += 1;
-  progress.history.unshift({
-    term: word.term,
-    deckId: dictId,
-    chapter: activeChapter(),
-    at: new Date().toISOString()
-  });
-  progress.history = progress.history.slice(0, 30);
-
-  saveProgress({ sync: true });
-  window.setTimeout(async () => {
-    await advanceWord();
-    completionLock = false;
-  }, 130);
-}
-
-async function advanceWord() {
-  const cursorKey = currentCursorKey();
-  if ((progress.cursors[cursorKey] || 0) >= activeChapterWords.length) {
-    if (activeChapter() < currentChapterCount() - 1) {
-      progress.chapters[progress.activeDeck] = activeChapter() + 1;
-      progress.cursors[currentCursorKey()] = progress.cursors[currentCursorKey()] || 0;
-    } else {
-      progress.cursors[cursorKey] = 0;
-      stopTyping();
-    }
-  }
-  await loadActiveDictionary();
-  speakCurrentWord();
+  renderPractice();
+  if (inputIsComplete()) completeWord();
 }
 
 function startTyping() {
+  if (isTyping) return;
   isTyping = true;
-  if (!sessionStartedAt) sessionStartedAt = performance.now();
-  clearInterval(sessionTimer);
-  sessionTimer = window.setInterval(renderStats, 1000);
-  renderWord();
+  sessionStartedAt = sessionStartedAt || performance.now();
+  clearInterval(timerId);
+  timerId = window.setInterval(renderStats, 1000);
+  renderPractice();
+  speakCurrentWord();
 }
 
 function stopTyping() {
   isTyping = false;
-  clearInterval(sessionTimer);
-  sessionStartedAt = 0;
+  clearInterval(timerId);
   el.typingInput.value = "";
+  renderPractice();
 }
 
-function resetCurrentWord() {
-  el.typingInput.value = "";
-  clearTimeout(wrongResetTimer);
-  focusInput();
-}
-
-function currentSessionMs() {
-  return sessionStartedAt ? performance.now() - sessionStartedAt : 0;
-}
-
-function shakeWord() {
-  el.letterRow.classList.remove("shake");
-  void el.letterRow.offsetWidth;
-  el.letterRow.classList.add("shake");
-}
-
-function saveProgress({ sync }) {
-  ensureProgressShape();
-  progress.updatedAt = new Date().toISOString();
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
-  markSaved("已保存");
-  if (sync && account?.token) {
-    clearTimeout(syncTimer);
-    syncTimer = window.setTimeout(() => pushProgress().catch(showSyncError), 700);
-  }
-}
-
-function markSaved(text) {
-  el.saveState.textContent = text;
-  clearTimeout(saveTimer);
-  saveTimer = window.setTimeout(() => {
-    el.saveState.textContent = "已保存";
-  }, 1200);
-}
-
-async function restoreSession() {
-  if (!account?.token) return;
-  try {
-    const data = await api("/api/me");
-    account.user = data.user;
-    localStorage.setItem(AUTH_KEY, JSON.stringify(account));
-    mergeRemote(data.progress);
-  } catch {
-    account = null;
-    localStorage.removeItem(AUTH_KEY);
-    renderAccount();
-  }
-}
-
-async function syncNow({ manual }) {
-  if (!account?.token) {
-    openAuth();
-    return;
-  }
-  if (manual) markSaved("同步中");
-  try {
-    const data = await api("/api/progress");
-    const previousDeck = progress.activeDeck;
-    mergeRemote(data.progress);
-    if (previousDeck !== progress.activeDeck) await loadActiveDictionary();
-    await pushProgress();
-    markSaved("已同步");
-  } catch (error) {
-    showSyncError(error);
-  }
-}
-
-function mergeRemote(remoteProgress) {
-  if (!remoteProgress) return;
-  const remoteTime = Date.parse(remoteProgress.updatedAt || 0);
-  const localTime = Date.parse(progress.updatedAt || 0);
-  const remoteWords = remoteProgress.stats?.words || 0;
-  const localWords = progress.stats?.words || 0;
-  if (remoteTime > localTime || remoteWords > localWords) {
-    progress = { ...defaultProgress(), ...remoteProgress };
-    ensureProgressShape();
-    normalizeActiveDictionary();
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
-  }
-}
-
-async function pushProgress() {
-  if (!account?.token) return;
-  markSaved("同步中");
-  const data = await api("/api/progress", {
-    method: "PUT",
-    body: JSON.stringify({ progress })
-  });
-  if (data.progress) {
-    progress = { ...defaultProgress(), ...data.progress };
-    ensureProgressShape();
-    normalizeActiveDictionary();
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
-  }
-  markSaved("已同步");
-}
-
-function showSyncError(error) {
-  markSaved("同步失败");
-  console.warn(error);
-}
-
-async function api(path, options = {}) {
-  const headers = {
-    "content-type": "application/json",
-    ...(options.headers || {})
-  };
-  if (account?.token) {
-    headers.authorization = `Bearer ${account.token}`;
-  }
-  const response = await fetch(path, {
-    ...options,
-    headers
-  });
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data.error || "请求失败");
-  return data;
-}
-
-function onAccountClick() {
-  if (!account?.token) {
-    openAuth();
-    return;
-  }
-  if (confirm("退出当前账号？")) {
-    account = null;
-    localStorage.removeItem(AUTH_KEY);
-    renderAccount();
-    markSaved("已退出");
-  }
-}
-
-function openAuth() {
-  setAuthMode("login");
-  el.authMessage.textContent = "";
-  el.passwordInput.value = "";
-  if (typeof el.authDialog.showModal === "function") {
-    el.authDialog.showModal();
-  } else {
-    el.authDialog.setAttribute("open", "");
-  }
-  window.setTimeout(() => el.usernameInput.focus(), 80);
-}
-
-function setAuthMode(mode) {
-  authMode = mode;
-  const isLogin = mode === "login";
-  el.authTitle.textContent = isLogin ? "登录" : "注册";
-  el.authSubmit.textContent = isLogin ? "登录" : "注册";
-  el.loginTab.classList.toggle("active", isLogin);
-  el.signupTab.classList.toggle("active", !isLogin);
-  el.passwordInput.autocomplete = isLogin ? "current-password" : "new-password";
-  el.authMessage.textContent = "";
-}
-
-async function submitAuth(event) {
-  event.preventDefault();
-  el.authSubmit.disabled = true;
-  el.authMessage.textContent = "";
-  try {
-    const payload = {
-      username: el.usernameInput.value.trim(),
-      password: el.passwordInput.value
-    };
-    const data = await api(authMode === "login" ? "/api/login" : "/api/signup", {
-      method: "POST",
-      body: JSON.stringify(payload)
-    });
-    account = { token: data.token, user: data.user };
-    localStorage.setItem(AUTH_KEY, JSON.stringify(account));
-    if (shouldPushLocal(data.progress)) {
-      await pushProgress();
+function completeWord() {
+  const word = currentWord();
+  if (!word) return;
+  progress.stats.words += 1;
+  progress.stats.chars += Array.from(canonical(word.term)).length;
+  progress.stats.totalMs += sessionStartedAt ? performance.now() - sessionStartedAt : 0;
+  currentIndex += 1;
+  progress.cursors[cursorKey()] = currentIndex;
+  if (currentIndex >= chapterWords.length) {
+    if (activeChapter() + 1 < chapterCount()) {
+      progress.chapters[activeDictId] = activeChapter() + 1;
     } else {
-      mergeRemote(data.progress);
-      await loadActiveDictionary();
+      progress.cursors[cursorKey()] = 0;
     }
-    el.authDialog.close();
-    renderAccount();
-    markSaved("已登录");
-  } catch (error) {
-    el.authMessage.textContent = error.message;
-  } finally {
-    el.authSubmit.disabled = false;
+    buildChapterWords();
   }
+  saveProgress();
+  el.typingInput.value = "";
+  renderPractice();
+  speakCurrentWord();
 }
 
-function shouldPushLocal(remoteProgress) {
-  const localWords = progress.stats?.words || 0;
-  const remoteWords = remoteProgress?.stats?.words || 0;
-  const localTime = Date.parse(progress.updatedAt || 0);
-  const remoteTime = Date.parse(remoteProgress?.updatedAt || 0);
-  return localWords > remoteWords || localTime > remoteTime;
+function firstWrongIndex() {
+  const typed = Array.from(canonical(el.typingInput.value));
+  const target = Array.from(canonical(currentWord()?.term || ""));
+  for (let index = 0; index < typed.length; index += 1) {
+    if (typed[index] !== target[index]) return index;
+  }
+  return -1;
 }
 
-function toggleSound() {
-  progress.settings.sound = !progress.settings.sound;
-  saveProgress({ sync: true });
-  renderAll();
-  if (progress.settings.sound) speakCurrentWord();
+function inputIsComplete() {
+  const typed = Array.from(canonical(el.typingInput.value));
+  const target = Array.from(canonical(currentWord()?.term || ""));
+  return target.length > 0 && typed.length === target.length && typed.every((char, index) => char === target[index]);
+}
+
+function openChapterDialog() {
+  el.chapterGrid.textContent = "";
+  for (let index = 0; index < chapterCount(); index += 1) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = `第 ${index + 1} 章`;
+    button.className = index === activeChapter() ? "active" : "";
+    button.addEventListener("click", () => {
+      progress.chapters[activeDictId] = index;
+      buildChapterWords();
+      renderPractice();
+      saveProgress();
+      el.chapterDialog.close();
+    });
+    el.chapterGrid.append(button);
+  }
+  el.chapterDialog.showModal();
+}
+
+function openWordList() {
+  el.wordList.textContent = "";
+  chapterWords.forEach((word) => {
+    const item = document.createElement("li");
+    item.textContent = `${word.term} ${word.definition ? "· " + word.definition : ""}`;
+    el.wordList.append(item);
+  });
+  el.listDialog.showModal();
+}
+
+function toggleSetting(key) {
+  progress.settings[key] = !progress.settings[key];
+  if (key === "shuffle") buildChapterWords();
+  saveProgress();
+  renderPractice();
 }
 
 function speakCurrentWord() {
-  if (!progress.settings.sound || !currentWord() || !("speechSynthesis" in window)) return;
+  if (!progress.settings.sound || !("speechSynthesis" in window) || !currentWord()) return;
   const utterance = new SpeechSynthesisUtterance(currentWord().term);
-  utterance.lang = activeDictionary()?.languageCategory === "en" ? "en-US" : "en-US";
+  utterance.lang = accentLanguage();
   utterance.rate = 0.92;
   window.speechSynthesis.cancel();
   window.speechSynthesis.speak(utterance);
 }
 
-function resetProgress() {
-  if (!confirm("重置当前浏览器里的练习进度？")) return;
-  progress = defaultProgress();
-  ensureProgressShape();
-  stopTyping();
-  saveProgress({ sync: true });
-  normalizeActiveDictionary();
-  loadActiveDictionary();
+function accentLanguage() {
+  const dict = getDict(activeDictId);
+  if (dict?.languageCategory === "ja") return "ja-JP";
+  if (dict?.languageCategory === "de") return "de-DE";
+  if (dict?.languageCategory === "id") return "id-ID";
+  return "en-US";
 }
 
 function exportProgress() {
-  const blob = new Blob(
-    [
-      JSON.stringify(
-        {
-          app: "Qwerty Learner Sync",
-          exportedAt: new Date().toISOString(),
-          progress
-        },
-        null,
-        2
-      )
-    ],
-    { type: "application/json" }
-  );
+  const blob = new Blob([JSON.stringify(progress, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = url;
-  anchor.download = `qwerty-learner-sync-${new Date().toISOString().slice(0, 10)}.json`;
+  anchor.download = `qwerty-progress-${new Date().toISOString().slice(0, 10)}.json`;
   document.body.append(anchor);
   anchor.click();
   anchor.remove();
@@ -836,30 +665,75 @@ async function importProgress() {
   const file = el.importFile.files?.[0];
   if (!file) return;
   try {
-    const json = JSON.parse(await file.text());
-    progress = { ...defaultProgress(), ...(json.progress || json) };
-    ensureProgressShape();
-    normalizeActiveDictionary();
-    stopTyping();
-    saveProgress({ sync: true });
-    await loadActiveDictionary();
-    markSaved("已导入");
-  } catch {
-    markSaved("导入失败");
+    progress = { ...loadProgress(), ...JSON.parse(await file.text()) };
+    activeDictId = progress.activeDictId || DEFAULT_DICT_ID;
+    await openPractice(activeDictId);
+    saveProgress();
   } finally {
     el.importFile.value = "";
   }
 }
 
-function focusInput() {
-  if (document.activeElement !== el.typingInput) {
-    el.typingInput.focus({ preventScroll: true });
-  }
+function resetProgress() {
+  if (!confirm("重置当前浏览器的学习进度？")) return;
+  localStorage.removeItem(STORAGE_KEY);
+  progress = loadProgress();
+  activeDictId = DEFAULT_DICT_ID;
+  location.hash = "";
+  showGallery();
 }
 
-function registerServiceWorker() {
-  if (!("serviceWorker" in navigator)) return;
-  if (location.protocol !== "https:" && location.hostname !== "localhost") return;
-  if (location.hostname.includes("cdn.jsdelivr.net")) return;
-  navigator.serviceWorker.register(new URL("../sw.js", import.meta.url)).catch(() => {});
+function renderShellState() {
+  document.body.classList.toggle("dark", progress.settings.dark);
+  el.syncLine.textContent = "本地进度";
+}
+
+function getDict(id) {
+  return dictionaries.find((dict) => dict.id === id);
+}
+
+function activeChapter() {
+  return Math.max(0, Number(progress.chapters[activeDictId] || 0));
+}
+
+function chapterCount() {
+  return Math.max(1, Math.ceil(activeWords.length / (manifest?.chapterSize || 20)));
+}
+
+function cursorKey() {
+  return `${activeDictId}:${activeChapter()}`;
+}
+
+function currentWord() {
+  return chapterWords[currentIndex] || null;
+}
+
+function normalizeTerm(value) {
+  return String(value).trim().replace(/\s+/g, " ").replace(/[‘’`]/g, "'").replace(/[“”]/g, '"');
+}
+
+function canonical(value) {
+  return normalizeTerm(value).toLowerCase();
+}
+
+function escapeHtml(value) {
+  return String(value).replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);
+}
+
+function shakeWord() {
+  el.letterRow.classList.remove("shake");
+  void el.letterRow.offsetWidth;
+  el.letterRow.classList.add("shake");
+}
+
+function seededShuffle(items, seed) {
+  const result = [...items];
+  let state = 0;
+  for (const char of seed) state = (state * 31 + char.charCodeAt(0)) >>> 0;
+  for (let index = result.length - 1; index > 0; index -= 1) {
+    state = (1664525 * state + 1013904223) >>> 0;
+    const swap = state % (index + 1);
+    [result[index], result[swap]] = [result[swap], result[index]];
+  }
+  return result;
 }

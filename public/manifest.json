@@ -1,7 +1,8 @@
 {
-  "name": "Qwerty Learner Sync",
-  "short_name": "Qwerty Sync",
-  "start_url": "/",
+  "name": "Qwerty Learner",
+  "short_name": "Qwerty",
+  "start_url": "./",
+  "scope": "./",
   "display": "standalone",
   "background_color": "#faf9ff",
   "theme_color": "#faf9ff",
