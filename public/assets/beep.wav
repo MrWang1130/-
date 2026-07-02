@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-Hans">
   <head>
     <meta charset="UTF-8" />
@@ -80,7 +80,7 @@
     <meta name="theme-color" content="#818CF8" />
     <meta name="application-name" content="Qwerty Learner" />
     <meta name="msapplication-TileColor" content="#818CF8" />
-    <meta name="msapplication-config" content="./browserconfig.xml" />
+    <meta name="msapplication-config" content="/browserconfig.xml" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
@@ -96,16 +96,6 @@
     <link rel="source" href="https://github.com/Kaiyiwing/qwerty-learner" />
     <link rel="source" href="https://qwerty.kaiyi.cool" />
     <link rel="manifest" href="./manifest.json" />
-    <script>
-      ;(function () {
-        var path = location.pathname
-        var marker = '/-@gh-pages'
-        if (path === '/-' || path.indexOf('/-/') === 0) window.__QWERTY_BASE__ = '/-'
-        else if (path.indexOf(marker) >= 0) window.__QWERTY_BASE__ = path.slice(0, path.indexOf(marker) + marker.length)
-        else window.__QWERTY_BASE__ = ''
-      })()
-    </script>
-    <link rel="stylesheet" href="./auth.css" />
 
     <!-- Structured Data -->
     <script type="application/ld+json">
@@ -211,6 +201,5 @@
     </noscript>
     <div id="root"></div>
     
-      <script src="./auth.js"></script>
   </body>
 </html>
