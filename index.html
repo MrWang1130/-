@@ -103,6 +103,7 @@
         if (path === '/-' || path.indexOf('/-/') === 0) window.__QWERTY_BASE__ = '/-'
         else if (path.indexOf(marker) >= 0) window.__QWERTY_BASE__ = path.slice(0, path.indexOf(marker) + marker.length)
         else window.__QWERTY_BASE__ = ''
+        window.QWERTY_API_BASE = 'https://api.wk113.xyz'
       })()
     </script>
     <link rel="stylesheet" href="./auth.css" />
