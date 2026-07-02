@@ -1,0 +1,223 @@
+﻿@media (max-width: 700px) {
+  #root *,
+  #root *::before,
+  #root *::after {
+    box-sizing: border-box;
+  }
+
+  html,
+  body,
+  #root {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  body {
+    overscroll-behavior-x: none;
+  }
+
+  #root main,
+  #root main > div,
+  #root [class~="h-full"],
+  #root [class~="w-full"] {
+    max-width: 100vw !important;
+  }
+
+  #root .relative.mb-auto.mt-auto.flex.w-full.flex-1.flex-col.overflow-y-auto.pl-20 {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    overflow-x: hidden !important;
+  }
+
+  #root .mt-20.flex.w-full.flex-1.flex-col.items-center.justify-center.overflow-y-auto {
+    width: 100vw !important;
+    max-width: 100vw !important;
+    align-items: stretch !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+    overflow-x: hidden !important;
+  }
+
+  #root .flex.h-full.flex-col.overflow-y-auto,
+  #root .flex-1.overflow-y-auto,
+  #root .h-full.w-full,
+  #root .mr-4.flex.flex-1.flex-col.items-start.justify-start.gap-14.overflow-y-auto {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    transform: none !important;
+  }
+
+  #root .flex.h-20.w-full.items-center.justify-between.pb-6.pr-20 {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    min-height: 64px;
+    justify-content: flex-start !important;
+    flex-wrap: wrap !important;
+    gap: 12px !important;
+    padding: 10px 12px 12px !important;
+    overflow: visible !important;
+    scrollbar-width: none;
+  }
+
+  #root .flex.h-20.w-full.items-center.justify-between.pb-6.pr-20::-webkit-scrollbar,
+  #root .flex.items-center.space-x-4::-webkit-scrollbar {
+    display: none;
+  }
+
+  #root header.container {
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+    overflow: visible !important;
+  }
+
+  #root header .flex.w-full.flex-col.items-center.justify-between {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  #root header nav.my-card {
+    width: 100% !important;
+    max-width: 100% !important;
+    flex-wrap: wrap !important;
+    justify-content: center !important;
+    gap: 10px 12px !important;
+    overflow: visible !important;
+    padding: 10px !important;
+    scrollbar-width: none;
+  }
+
+  #root header nav.my-card.space-x-3 > :not([hidden]) ~ :not([hidden]) {
+    margin-left: 0 !important;
+  }
+
+  #root header nav.my-card::-webkit-scrollbar {
+    display: none;
+  }
+
+  #root header nav.my-card > * {
+    flex: 0 0 auto !important;
+  }
+
+  #root header nav.my-card .flex.items-center.justify-center.gap-2 {
+    width: 100% !important;
+    max-width: 100% !important;
+    flex-wrap: wrap !important;
+    justify-content: center !important;
+    gap: 8px !important;
+  }
+
+  #root .flex.items-center.space-x-4 {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow: visible !important;
+    flex-wrap: wrap !important;
+    gap: 10px !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    padding-bottom: 2px;
+    scrollbar-width: none;
+  }
+
+  #root .space-x-4 > :not([hidden]) ~ :not([hidden]) {
+    margin-left: 0 !important;
+  }
+
+  #root .mr-4.flex.flex-1.flex-col.items-start.justify-start.gap-14.overflow-y-auto > div,
+  #root .mr-4.flex.flex-1.flex-col.items-start.justify-start.gap-14.overflow-y-auto > div > div {
+    width: calc(100vw - 24px) !important;
+    max-width: calc(100vw - 24px) !important;
+    min-width: 0 !important;
+  }
+
+  #root .mr-4.flex.flex-1.flex-col.items-start.justify-start.gap-14.overflow-y-auto {
+    width: calc(100vw - 24px) !important;
+    max-width: calc(100vw - 24px) !important;
+  }
+
+  #root .flex.items-center.space-x-4 > * {
+    flex: 0 0 auto !important;
+  }
+
+  #root .mt-8.grid.gap-x-5.gap-y-10.px-1.pb-4 {
+    width: calc(100vw - 24px) !important;
+    max-width: calc(100vw - 24px) !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 16px !important;
+    margin-top: 16px !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+
+  #root .mt-8.grid.gap-x-5.gap-y-10.px-1.pb-4 > *,
+  #root .group.flex.h-36.w-80 {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  #root .group.flex.h-36.w-80 .relative.ml-1.mt-2.flex.h-full.w-full {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-left: 0 !important;
+  }
+
+  #root .flex.items-center.justify-center.pb-10 {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding-top: 48px !important;
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+  }
+
+  #root .flex.items-center.justify-center.pb-10 p {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-right: 0 !important;
+  }
+
+  #root .fixed.left-0.right-0.top-0,
+  #root header {
+    max-width: 100vw !important;
+    overflow: hidden;
+  }
+
+  #root h1 {
+    max-width: calc(100vw - 118px);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  #root .fixed.inset-0,
+  #root .absolute.inset-0 {
+    max-width: 100vw !important;
+    overflow-x: hidden !important;
+  }
+
+  #root .fixed.inset-0 .flex.h-screen,
+  #root .fixed.inset-0 .h-screen,
+  #root .absolute.inset-0 .h-screen {
+    width: 100vw !important;
+    max-width: 100vw !important;
+  }
+
+  #root .rounded-lg,
+  #root .rounded-xl,
+  #root .rounded-2xl {
+    max-width: 100% !important;
+  }
+
+  #root button,
+  #root a {
+    touch-action: manipulation;
+  }
+}
