@@ -1,5 +1,5 @@
 const CACHE = "qwerty-sync-static-v2";
-const ASSETS = ["/", "/index.html", "/src/styles.css", "/src/app.js", "/src/dictionaries.json", "/manifest.json"];
+const ASSETS = ["./", "./index.html", "./src/styles.css", "./src/app.js", "./src/dictionaries.json", "./manifest.json"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(ASSETS)));

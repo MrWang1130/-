@@ -1,6 +1,6 @@
 const STORAGE_KEY = "qwerty-sync.progress.v2";
 const AUTH_KEY = "qwerty-sync.auth.v1";
-const MANIFEST_URL = "/src/dictionaries.json";
+const MANIFEST_URL = new URL("./dictionaries.json", import.meta.url).toString();
 const DEFAULT_DICT_ID = "cet4";
 
 const SELECTORS = {
@@ -860,5 +860,6 @@ function focusInput() {
 function registerServiceWorker() {
   if (!("serviceWorker" in navigator)) return;
   if (location.protocol !== "https:" && location.hostname !== "localhost") return;
-  navigator.serviceWorker.register("/sw.js").catch(() => {});
+  if (location.hostname.includes("cdn.jsdelivr.net")) return;
+  navigator.serviceWorker.register(new URL("../sw.js", import.meta.url)).catch(() => {});
 }
