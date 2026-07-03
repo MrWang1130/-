@@ -11,7 +11,8 @@ const PUBLIC_DIR = path.join(ROOT, "public");
 const DATA_DIR = path.join(ROOT, "data");
 const DB_PATH = path.join(DATA_DIR, "db.json");
 const SECRET_PATH = path.join(DATA_DIR, "secret.txt");
-const MAX_BODY_BYTES = 1024 * 1024;
+const MAX_BODY_BYTES = 8 * 1024 * 1024;
+const RECORD_STORES = ["wordRecords", "chapterRecords", "reviewRecords"];
 
 const MIME = {
   ".html": "text/html; charset=utf-8",
@@ -153,42 +154,69 @@ function getAuthUser(req, db) {
 
 function createDefaultProgress() {
   return {
-    schema: 1,
-    activeDeck: "core",
-    cursors: {},
-    deckStats: {},
-    stats: {
-      words: 0,
-      chars: 0,
-      errors: 0,
-      totalMs: 0,
-      streak: 0,
-      bestStreak: 0,
-      sessions: 0
+    version: 2,
+    savedAt: new Date().toISOString(),
+    items: {},
+    recordDb: {
+      version: 3,
+      stores: {
+        wordRecords: [],
+        chapterRecords: [],
+        reviewRecords: []
+      }
     },
-    history: [],
-    settings: {
-      sound: true,
-      compactKeyboard: false
-    },
-    updatedAt: new Date().toISOString()
+    summary: {
+      wordRecords: 0,
+      chapterRecords: 0,
+      reviewRecords: 0
+    }
   };
+}
+
+function sanitizeJsonValue(value, depth = 0) {
+  if (depth > 8) return null;
+  if (value == null) return null;
+  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") return value;
+  if (Array.isArray(value)) return value.slice(0, 50000).map((item) => sanitizeJsonValue(item, depth + 1));
+  if (typeof value === "object") {
+    const output = {};
+    for (const [key, itemValue] of Object.entries(value)) {
+      if (typeof key === "string" && key.length <= 80) output[key] = sanitizeJsonValue(itemValue, depth + 1);
+    }
+    return output;
+  }
+  return null;
 }
 
 function sanitizeProgress(progress) {
   if (!progress || typeof progress !== "object" || Array.isArray(progress)) {
     return createDefaultProgress();
   }
-  const text = JSON.stringify(progress);
-  if (Buffer.byteLength(text, "utf8") > MAX_BODY_BYTES) {
-    throw new Error("Progress payload is too large.");
+  const output = createDefaultProgress();
+  output.savedAt = typeof progress.savedAt === "string" ? progress.savedAt : new Date().toISOString();
+
+  if (progress.items && typeof progress.items === "object" && !Array.isArray(progress.items)) {
+    for (const [key, value] of Object.entries(progress.items)) {
+      if (typeof key === "string" && typeof value === "string") output.items[key] = value;
+    }
   }
-  return {
-    ...createDefaultProgress(),
-    ...progress,
-    schema: 1,
-    updatedAt: progress.updatedAt || new Date().toISOString()
-  };
+
+  const stores = progress.recordDb?.stores;
+  if (stores && typeof stores === "object" && !Array.isArray(stores)) {
+    for (const storeName of RECORD_STORES) {
+      const records = stores[storeName];
+      if (!Array.isArray(records)) continue;
+      output.recordDb.stores[storeName] = records
+        .slice(0, 50000)
+        .map((record) => sanitizeJsonValue(record))
+        .filter((record) => record && typeof record === "object" && !Array.isArray(record));
+      output.summary[storeName] = output.recordDb.stores[storeName].length;
+    }
+  }
+
+  const text = JSON.stringify(output);
+  if (Buffer.byteLength(text, "utf8") > MAX_BODY_BYTES) throw new Error("Progress payload is too large.");
+  return output;
 }
 
 async function handleApi(req, res, url) {

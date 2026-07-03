@@ -1,5 +1,6 @@
 const TOKEN_DAYS = 30;
-const MAX_PROGRESS_BYTES = 1024 * 1024;
+const MAX_PROGRESS_BYTES = 8 * 1024 * 1024;
+const RECORD_STORES = ["wordRecords", "chapterRecords", "reviewRecords"];
 
 const CORS_HEADERS = {
   "access-control-allow-origin": "*",
@@ -52,9 +53,22 @@ const publicUser = (user) => ({
 });
 
 const defaultProgress = () => ({
-  version: 1,
+  version: 2,
   savedAt: new Date().toISOString(),
-  items: {}
+  items: {},
+  recordDb: {
+    version: 3,
+    stores: {
+      wordRecords: [],
+      chapterRecords: [],
+      reviewRecords: []
+    }
+  },
+  summary: {
+    wordRecords: 0,
+    chapterRecords: 0,
+    reviewRecords: 0
+  }
 });
 
 const parseProgress = (value) => {
@@ -65,12 +79,40 @@ const parseProgress = (value) => {
   }
 };
 
+const sanitizeJsonValue = (value, depth = 0) => {
+  if (depth > 8) return null;
+  if (value == null) return null;
+  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") return value;
+  if (Array.isArray(value)) return value.slice(0, 50000).map((item) => sanitizeJsonValue(item, depth + 1));
+  if (typeof value === "object") {
+    const output = {};
+    for (const [key, itemValue] of Object.entries(value)) {
+      if (typeof key === "string" && key.length <= 80) output[key] = sanitizeJsonValue(itemValue, depth + 1);
+    }
+    return output;
+  }
+  return null;
+};
+
 const sanitizeProgress = (value) => {
   if (!value || typeof value !== "object" || Array.isArray(value)) return defaultProgress();
   const progress = {
-    version: 1,
+    version: 2,
     savedAt: typeof value.savedAt === "string" ? value.savedAt : new Date().toISOString(),
-    items: {}
+    items: {},
+    recordDb: {
+      version: 3,
+      stores: {
+        wordRecords: [],
+        chapterRecords: [],
+        reviewRecords: []
+      }
+    },
+    summary: {
+      wordRecords: 0,
+      chapterRecords: 0,
+      reviewRecords: 0
+    }
   };
   if (value.items && typeof value.items === "object" && !Array.isArray(value.items)) {
     for (const [key, itemValue] of Object.entries(value.items)) {
@@ -79,9 +121,21 @@ const sanitizeProgress = (value) => {
       }
     }
   }
+  const stores = value.recordDb?.stores;
+  if (stores && typeof stores === "object" && !Array.isArray(stores)) {
+    for (const storeName of RECORD_STORES) {
+      const records = stores[storeName];
+      if (!Array.isArray(records)) continue;
+      progress.recordDb.stores[storeName] = records
+        .slice(0, 50000)
+        .map((record) => sanitizeJsonValue(record))
+        .filter((record) => record && typeof record === "object" && !Array.isArray(record));
+      progress.summary[storeName] = progress.recordDb.stores[storeName].length;
+    }
+  }
   const serialized = JSON.stringify(progress);
   if (new TextEncoder().encode(serialized).byteLength > MAX_PROGRESS_BYTES) {
-    throw new Error("进度数据太大，保存失败。");
+    throw new Error("学习记录太大，保存失败。");
   }
   return progress;
 };
